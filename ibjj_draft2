@@ -1,0 +1,421 @@
+##############################################
+# wayback machine ----
+##############################################
+library(rvest); library(tidyverse); library(stringr)
+library(httr2); library(janitor)
+library(RSelenium); library(netstat)
+
+# Scrape all link text
+# inspect element > network > reload page (command R) > search for . Add that to the end of https://web.archive.org
+link_text = "https://web.archive.org/web/timemap/json?url=https://www.bjjcompsystem.com/tournaments/1869/categories&matchType=prefix&collapse=urlkey&output=json&fl=original,mimetype,timestamp,endtimestamp,groupcount,uniqcount&filter=!statuscode:[45]..&limit=10000&_=1663136483842" %>% 
+  request() %>% 
+  req_perform() %>% 
+  resp_body_json(simplifyVector = TRUE) %>% 
+  as_tibble() %>% 
+  row_to_names(1)
+
+link_text = link_text[-c(1, 788:790),]
+# 1
+# We create a column of the first 65 characters in the link with mutate()
+# We use distinct() to select only those rows with distinct link prefixes
+# We get rid of the dummy column with select()
+# link_text_no_duplicates <- link_text %>% 
+#   mutate(duplicate_check=substr(original, 1, 65)) %>% 
+#   distinct(duplicate_check, .keep_all = TRUE) %>% 
+#   select(!duplicate_check)
+
+#2
+# library(data.table)
+# link_text3 = data.table(link_text)
+# link_text3 = link_text[ , root_link := str_remove(link_text$original, "\\?.*$")]
+# link_text3 = link_text3[ , check_unique := duplicated(root_link)]
+# link_text3_unique = link_text3[ check_unique == FALSE ]
+
+# 3
+link_text2 = link_text
+link_text2 = as.list(substr(link_text2$original, 1, 65)) 
+link_text2 = link_text2[!duplicated(link_text2)]
+head(link_text2)
+
+# Save only the url portion
+#links = link_text$original
+
+#Create prefix to add to links
+prefix = 'https://web.archive.org/web/20220000000000*/'
+
+# Add prefix to links
+links = str_c(prefix, link_text2)
+
+# Start server
+remote_driver = rsDriver(browser = 'firefox',
+                         verbose = F,
+                         port = free_port())
+rd = remote_driver$client
+rd$open()
+rd$navigate('https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053147&')
+rd$maxWindowSize()
+
+# Know length for the loop
+length(links)
+
+# First Loop ---------------------------------------
+## create empty vector  
+tree1.87 = data.frame()
+
+# Start scraping!
+for (i in 1:87){
+  rd$navigate(links[i])
+  Sys.sleep(10)
+  date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
+  date$clickElement()
+  Sys.sleep(10)
+  
+  # Get pg source to read html data
+  html = read_html(rd$getPageSource()[[1]])
+
+  division = html %>% 
+    html_nodes('.category-title__age-division') %>%
+    html_text(trim = TRUE)
+  gender = html %>% 
+    html_nodes('.category-title__age-division+ .category-title__label') %>% 
+    html_text(trim = TRUE)
+  belt = html %>% 
+    html_nodes('.category-title__label:nth-child(3)') %>%
+    html_text(trim = TRUE)
+  weight = html %>%
+    html_nodes('.category-title__label:nth-child(4)') %>%
+    html_text(trim = TRUE)
+  winner = html %>% 
+    html_nodes('.match-card__competitor--red') %>%
+    html_text(trim = TRUE)
+  opponent = html %>% 
+    html_nodes('hr+ .match-card__competitor') %>% 
+    html_text(trim = TRUE)
+             
+## convert match info to df
+matches = data.frame('division' = division,
+                     'gender' = gender,
+                     'belt' = belt,
+                     'weight' = weight,
+                     'winner'= winner,
+                     'opponent' = opponent)
+tree1.87 <- rbind(tree1.87, matches)
+}
+
+# Use if loop breaks to see where it left off at
+which(links == 'https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053228')
+
+
+# Second Loop ---------------------------------------------
+tree88.176 = data.frame()
+
+for (i in 88:176){
+  rd$navigate(links[i])
+  Sys.sleep(10)
+  date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
+  date$clickElement()
+  Sys.sleep(10)
+  
+  # Get pg source to read html data
+  html = read_html(rd$getPageSource()[[1]])
+
+  division = html %>% 
+    html_nodes('.category-title__age-division') %>%
+    html_text(trim = TRUE)
+  gender = html %>% 
+    html_nodes('.category-title__age-division+ .category-title__label') %>% 
+    html_text(trim = TRUE)
+  belt = html %>% 
+    html_nodes('.category-title__label:nth-child(3)') %>%
+    html_text(trim = TRUE)
+  weight = html %>%
+    html_nodes('.category-title__label:nth-child(4)') %>%
+    html_text(trim = TRUE)
+  winner = html %>% 
+    html_nodes('.match-card__competitor--red') %>%
+    html_text(trim = TRUE)
+  opponent = html %>% 
+    html_nodes('hr+ .match-card__competitor') %>% 
+    html_text(trim = TRUE)
+             
+## convert match info to df 
+matches = data.frame('division' = division,
+                     'gender' = gender,
+                     'belt' = belt,
+                     'weight' = weight,
+                     'winner'= winner,
+                     'opponent' = opponent)
+tree88.176 <- rbind(tree88.176, matches)
+}
+which(links == 'https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053228')
+
+# Third Loop --------------------------------------------
+tree177.264 = data.frame()
+
+for (i in 177:264){
+  rd$navigate(links[i])
+  Sys.sleep(10)
+  date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
+  date$clickElement()
+  
+  Sys.sleep(10)
+  
+  # Get pg source to read html data
+  html = read_html(rd$getPageSource()[[1]])
+
+  division = html %>% 
+    html_nodes('.category-title__age-division') %>%
+    html_text(trim = TRUE)
+  gender = html %>% 
+    html_nodes('.category-title__age-division+ .category-title__label') %>% 
+    html_text(trim = TRUE)
+  belt = html %>% 
+    html_nodes('.category-title__label:nth-child(3)') %>%
+    html_text(trim = TRUE)
+  weight = html %>%
+    html_nodes('.category-title__label:nth-child(4)') %>%
+    html_text(trim = TRUE)
+  winner = html %>% 
+    html_nodes('.match-card__competitor--red') %>%
+    html_text(trim = TRUE)
+  opponent = html %>% 
+    html_nodes('hr+ .match-card__competitor') %>% 
+    html_text(trim = TRUE)
+             
+## convert match info to df
+matches = data.frame('division' = division,
+                     'gender' = gender,
+                     'belt' = belt,
+                     'weight' = weight,
+                     'winner'= winner,
+                     'opponent' = opponent)
+tree177.264 <- rbind(tree177.264, matches)
+}
+which(links == 'https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053228')
+
+# Fourth Loop -------------------------------------------------
+tree265.352 = data.frame()
+
+for (i in 265:352){
+  rd$navigate(links[i])
+  Sys.sleep(10)
+  date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
+  date$clickElement()
+  
+  Sys.sleep(10)
+  
+  # Get pg source to read html data
+  html = read_html(rd$getPageSource()[[1]])
+
+  division = html %>% 
+    html_nodes('.category-title__age-division') %>%
+    html_text(trim = TRUE)
+  gender = html %>% 
+    html_nodes('.category-title__age-division+ .category-title__label') %>% 
+    html_text(trim = TRUE)
+  belt = html %>% 
+    html_nodes('.category-title__label:nth-child(3)') %>%
+    html_text(trim = TRUE)
+  weight = html %>%
+    html_nodes('.category-title__label:nth-child(4)') %>%
+    html_text(trim = TRUE)
+  winner = html %>% 
+    html_nodes('.match-card__competitor--red') %>%
+    html_text(trim = TRUE)
+  opponent = html %>% 
+    html_nodes('hr+ .match-card__competitor') %>% 
+    html_text(trim = TRUE)
+             
+## convert match info to df 
+matches = data.frame('division' = division,
+                     'gender' = gender,
+                     'belt' = belt,
+                     'weight' = weight,
+                     'winner'= winner,
+                     'opponent' = opponent)
+tree265.352 <- rbind(tree265.352, matches)
+}
+which(links == 'https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053228')
+
+
+# Fifth Loop ------------------------------------------------
+tree353.437 = data.frame()
+
+for (i in 353:437){
+  rd$navigate(links[i])
+  Sys.sleep(10)
+  date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
+  date$clickElement()
+  
+  Sys.sleep(10)
+  
+  # Get pg source to read html data
+  html = read_html(rd$getPageSource()[[1]])
+
+  division = html %>% 
+    html_nodes('.category-title__age-division') %>%
+    html_text(trim = TRUE)
+  gender = html %>% 
+    html_nodes('.category-title__age-division+ .category-title__label') %>% 
+    html_text(trim = TRUE)
+  belt = html %>% 
+    html_nodes('.category-title__label:nth-child(3)') %>%
+    html_text(trim = TRUE)
+  weight = html %>%
+    html_nodes('.category-title__label:nth-child(4)') %>%
+    html_text(trim = TRUE)
+  winner = html %>% 
+    html_nodes('.match-card__competitor--red') %>%
+    html_text(trim = TRUE)
+  opponent = html %>% 
+    html_nodes('hr+ .match-card__competitor') %>% 
+    html_text(trim = TRUE)
+             
+## convert match info to df 
+matches = data.frame('division' = division,
+                     'gender' = gender,
+                     'belt' = belt,
+                     'weight' = weight,
+                     'winner'= winner,
+                     'opponent' = opponent)
+tree353.437 <- rbind(tree353.437, matches)
+}
+which(links == 'https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053228')
+
+# END SESSION!
+rd$deleteAllCookies() 
+rd$quit() 
+rd$closeServer()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Mess I decided not to use ----------------------------
+# link_text = link_text[-c(1, 788:790),]
+# # links1 = link_text[link_text$uniqcount == 1, ]
+# # links1 = links1$original
+# # links2 = link_text[link_text$uniqcount > 1, ]
+# # links2 = links2$original
+# 
+# 
+# links = link_text$original
+# #Create prefix to add to links
+# prefix = 'https://web.archive.org/web/20220000000000*/'
+# 
+# # Add prefix to links
+# links = str_c(prefix, links)
+# # links1 = str_c(prefix, links1)
+# # links2 = str_c(prefix, links2)
+# 
+# 
+# # User made function telling R what to scrape from each link
+# tree_page <- function(url) {
+#   html <- read_html(url)
+#   data.frame(division = html %>% 
+#                html_nodes('.category-title__age-division') %>%
+#                html_text(trim = TRUE),
+#              gender = html %>% 
+#                html_nodes('.category-title__age-division+ .category-title__label') %>% 
+#                html_text(trim = TRUE),
+#              belt = html %>% 
+#                html_nodes('.category-title__label:nth-child(3)') %>%
+#                html_text(trim = TRUE),
+#              weight = html %>% 
+#                html_nodes('.category-title__label:nth-child(4)') %>%
+#                html_text(trim = TRUE),
+#              winner = html %>% 
+#                html_nodes('.match-card__competitor--red') %>%
+#                html_text(trim = TRUE),
+#              opponent = html %>% 
+#                html_nodes('hr+ .match-card__competitor') %>% 
+#                html_text(trim = TRUE)
+#              )
+# }
+# 
+# # Start server
+# remote_driver = rsDriver(browser = 'firefox',
+#                          verbose = F,
+#                          port = free_port())
+# rd = remote_driver$client
+# rd$open()
+# rd$navigate('https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053147&')
+# rd$maxWindowSize()
+# 
+# length(links) #786
+# 
+# 
+# # links = c("https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053147&"            
+# # , "https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053148?locale=en" , 
+# # "https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053148?locale=pt-BR")
+# 
+# for (i in 1:3){
+#   rd$navigate(links[1])
+#   Sys.sleep(3)
+#   date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
+#   date$clickElement()
+#   
+# Sys.sleep(70)
+# 
+# blah = read_html(rd$getPageSource()[[1]])
+# 
+# # Apply function to all links
+# master.tree <- map_df(links[1], tree_page)
+# }
+# 
+# links = 
+# 
+# 
+# 
+# 
+# 
+# # data cleaning
+# master.tree = master.tree %>%
+#     mutate(winner.rank = as.numeric(str_extract(winner, "[0-9]+"))) %>%
+#     relocate(winner.rank, .before = winner) %>% 
+#   mutate(opp.rank = as.numeric(str_extract(opponent,'[0-9]+'))) %>% 
+#   relocate(opp.rank, .before = opponent)
+# 
+# #unique values
+# unique(master.tree$division)
+# unique(master.tree$gender)
+# unique(master.tree$belt)
+# unique(master.tree$weight)
+# 
+# # END SESSION!
+# rd$deleteAllCookies() 
+# rd$quit() 
+# rd$closeServer()
+
+
+
