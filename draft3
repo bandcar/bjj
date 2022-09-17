@@ -36,15 +36,16 @@ length(links)
 
 ## create empty vector  
 master.tree = data.frame()
+# use to help keep track of the element
 x=0
 
-# Start scraping!
-for (i in 1:437){
+# Start scraping! ----
+for (i in 128:437){
   rd$navigate(links[i])
-  Sys.sleep(13)
+  Sys.sleep(15)
   date = rd$findElement(using = 'css', '.captures-range-info a:last-of-type')
   date$clickElement()
-  Sys.sleep(13)
+  Sys.sleep(15)
   
   # Get pg source to read html data
   html = read_html(rd$getPageSource()[[1]])
@@ -97,26 +98,31 @@ tree <- match_info %>%
 
 master.tree = rbind(master.tree, tree)
 
+# Update element count
 x = x+1
 
 # check completed links
 print(links[i]); print(paste('Element', x, "is done"))
 }
 
+# end loop ----
 # Use to verify which element loop broke at
-which(links==paste0(prefix,'https://www.bjjcompsystem.com/tournaments/1869/categories/2053415'))
-which(links=='https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053513')
+which(links==paste0(prefix,'https://www.bjjcompsystem.com/tournaments/1869/categories/2053170'))
+which(links=='https://web.archive.org/web/20220000000000*/https://www.bjjcompsystem.com/tournaments/1869/categories/2053274')
 
 # END SESSION! ----
 rd$deleteAllCookies() 
 rd$quit() 
 rd$closeServer()
 
+# save unedited master.tree (16342 x 9)
+#write.csv(master.tree, '/Users/melissaalejandro/iCloud Drive (Archive) - 3/Documents/Documents - Melissa’s MacBook Pro/Research/ibjjf/draft3_unedited.csv')
+
 # Data Cleaning -----------------------------------------
-master.tree = master.tree%>%
+master.tree = master.tree %>%
     mutate(fight = sub(':.*', '', master.tree$fightAndMat)) %>%
     relocate(fight, .before = date) 
-tree = tree[ -5]
+master.tree = master.tree[ -5]
 
 # Move every other row to a new column
 master.tree = master.tree %>%
@@ -126,11 +132,21 @@ master.tree = master.tree %>%
   pivot_wider(names_from = grp, values_from = c(competitor, name, gym)) %>%
   select(-rn)
 
-# rename and reorganize column names
+# rename and reorder column names
 master.tree = master.tree %>% 
   rename(winner.rank = competitor_Column1, winner = name_Column1, winner.gym = gym_Column1, opp.rank = competitor_Column2, opponent = name_Column2, opp.gym = gym_Column2) 
 
 master.tree <- master.tree[, c(1:7, 9, 11, 8, 10, 12)]
+
+# remove rows if there's an na in fight column
+master.tree = master.tree %>% drop_na(c("fight"))
+
+# move time to a new column
+master.tree = master.tree %>%
+  separate(date, into = c('day', 'time'), sep = ' at ', remove = FALSE)
+
+# Replaces remaining NAs with 'BYE'
+master.tree[is.na(master.tree)] <- 'BYE'
 
 
 
